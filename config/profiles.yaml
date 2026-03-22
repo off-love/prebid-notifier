@@ -1,0 +1,32 @@
+profiles:
+- name: 지적측량 용역
+  enabled: true
+  bid_types:
+  - service
+  keywords:
+    or:
+    - 지적측량
+    - 확정측량
+    - 측량
+    - 지적확정측량
+    - 분할측량
+    - 예정지적좌표
+    - 택지예정좌표
+    - 단계분할
+    - 단계 분할
+    and: []
+    exclude:
+    - 취소공고
+    - 정정공고
+  demand_agencies:
+    by_code: []
+    by_name: []
+  regions: []
+  price_range:
+    min: 0
+    max: 0
+settings:
+  check_interval_minutes: 30
+  query_buffer_hours: 1
+  max_results_per_page: 999
+  timezone: Asia/Seoul
