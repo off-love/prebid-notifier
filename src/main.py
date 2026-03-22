@@ -2,7 +2,7 @@
 메인 실행 스크립트
 
 GitHub Actions cron 에 의해 30분마다 실행됩니다.
-프로필별로 입찰공고 + 사전규격을 조회하고, 필터링 후 텔레그램으로 알림을 보냅니다.
+프로필별로 사전규격을 조회하고, 필터링 후 텔레그램으로 알림을 보냅니다.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from src.storage.state_manager import (
     save_state,
     update_last_check,
 )
-from src.telegram_bot import send_bid_notifications, send_message
+from src.telegram_bot import send_message
 from src.utils.time_utils import now_kst
 
 # 로깅 설정

@@ -17,8 +17,6 @@ from src.core.models import (
 
 def _make_prebid(
     name: str = "테스트 공고",
-    dmnd_nm: str = "테스트기관",
-    region: str = "서울",
     price: int = 100_000_000,
     bid_type: BidType = BidType.SERVICE,
 ) -> PreBidNotice:

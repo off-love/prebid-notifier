@@ -136,11 +136,12 @@ class BookmarkItem:
     bid_no: str                   # 사전규격번호
     name: str                     # 사전규격명
     org: str                      # 공고(수요)기관명
-    price: int                    # 배정예산액
     close_date: str               # 마감일시
     url: str                      # 상세 URL
     saved_at: str                 # 저장 시각
     profile: str                  # 매칭된 프로필명
+    demand_org: str = ""          # 수요기관명
+    price: int = 0                # 배정예산액
     notice_type: str = "prebid"   # prebid
     notes: str = ""               # 사용자 메모
 

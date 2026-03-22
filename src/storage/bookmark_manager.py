@@ -10,7 +10,7 @@ import json
 import logging
 from pathlib import Path
 
-from src.core.models import BidNotice, BookmarkItem, PreBidNotice
+from src.core.models import BookmarkItem, PreBidNotice
 from src.utils.time_utils import now_iso
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ def load_bookmarks(path: Path | None = None) -> list[BookmarkItem]:
             url=item.get("url", ""),
             saved_at=item.get("saved_at", ""),
             profile=item.get("profile", ""),
-            notice_type=item.get("notice_type", "bid"),
+            notice_type=item.get("notice_type", "prebid"),
             notes=item.get("notes", ""),
         ))
     return items
@@ -77,35 +77,6 @@ def save_bookmarks(items: list[BookmarkItem], path: Path | None = None) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def add_bookmark_from_bid(notice: BidNotice, profile_name: str) -> BookmarkItem:
-    """입찰공고를 북마크에 추가"""
-    items = load_bookmarks()
-
-    # 중복 체크
-    for item in items:
-        if item.bid_no == notice.unique_key:
-            logger.info("이미 북마크에 존재: %s", notice.unique_key)
-            return item
-
-    bookmark = BookmarkItem(
-        bid_no=notice.unique_key,
-        name=notice.bid_ntce_nm,
-        org=notice.ntce_instt_nm,
-        demand_org=notice.dmnd_instt_nm,
-        price=notice.presmpt_prce,
-        close_date=notice.bid_clse_dt,
-        url=notice.bid_ntce_dtl_url,
-        saved_at=now_iso(),
-        profile=profile_name,
-        notice_type="bid",
-    )
-
-    items.append(bookmark)
-    save_bookmarks(items)
-    logger.info("북마크 추가: %s", notice.bid_ntce_nm)
-    return bookmark
-
-
 def add_bookmark_from_prebid(notice: PreBidNotice, profile_name: str) -> BookmarkItem:
     """사전규격공개를 북마크에 추가"""
     items = load_bookmarks()
@@ -121,7 +92,7 @@ def add_bookmark_from_prebid(notice: PreBidNotice, profile_name: str) -> Bookmar
         name=notice.prcure_nm,
         org=notice.ntce_instt_nm,
         demand_org="",
-        price=0,
+        price=notice.asign_bdgt_amt,
         close_date=notice.opnn_reg_clse_dt,
         url=notice.dtl_url,
         saved_at=now_iso(),

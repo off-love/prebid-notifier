@@ -207,7 +207,9 @@ def process_updates() -> None:
                 continue
 
             parts = text.split()
-            command = parts[0].lower()
+            raw_command = parts[0].lower()
+            # @botname 접미사 제거 (예: /search@mybotname → /search)
+            command = raw_command.split("@")[0]
             args = parts[1:]
 
             logger.info("명령어 수신: %s (args: %s)", command, args)
@@ -216,11 +218,8 @@ def process_updates() -> None:
                 send_message(
                     "안녕하세요! 나라장터 사전규격 알림 조수입니다. 🤖\n\n"
                     "아래 명령어를 통해 검색 키워드를 언제든지 실시간으로 관리하실 수 있습니다!\n"
-                    "(입력 후 최대 30분 이내에 처리 완료 메시지가 도착합니다.)\n\n"
-                    "🔍 /list - 현재 등록된 키워드 목록 보기\n"
-                    "➕ /add [키워드] - 새 키워드 추가 (예: /add 공간정보)\n"
-                    "➖ /remove [키워드] - 키워드 삭제 (예: /remove 공간정보)\n"
-                    "🔎 /search [키워드] - (1회성) 지금 즉시 24시간 내 공고 검색", 
+                    "(입력 후 1시간 내외에 처리 완료 메시지가 도착합니다.)\n\n"
+                    "🔍 /list - 현재 등록된 키워드 목록 보기",
                     chat_id=chat_id,
                 )
             elif command == "/list":
