@@ -34,6 +34,12 @@ from src.storage.profile_manager import (
     load_profiles,
     remove_profile_keyword,
 )
+from src.storage.subscriber_manager import (
+    add_subscriber,
+    get_subscriber_count,
+    load_subscribers,
+    remove_subscriber,
+)
 from src.storage.state_manager import load_state, save_state
 from src.telegram_bot import send_message
 
@@ -54,11 +60,13 @@ def get_active_profile_name() -> str | None:
 
 # ── 권한 체크 헬퍼 ────────────────────────────────────────────────────────────
 
-def _require_admin(chat_id: str, command: str) -> bool:
+def _require_admin(chat_id: str, command: str, user_id: str | None = None) -> bool:
     """관리자 권한이 있으면 True, 없으면 거부 메시지를 보내고 False를 반환합니다."""
-    if is_admin(chat_id):
+    # user_id가 주어지면 user_id를, 아니면 chat_id를 기준으로 체크
+    auth_id = user_id or chat_id
+    if is_admin(auth_id):
         return True
-    logger.warning("권한 없는 명령어 시도: %s (chat_id=%s)", command, chat_id)
+    logger.warning("권한 없는 명령어 시도: %s (user_id=%s, chat_id=%s)", command, auth_id, chat_id)
     send_message(
         "⛔ <b>접근 권한이 없습니다.</b>\n"
         f"<code>{command}</code> 명령어는 관리자만 사용할 수 있습니다.\n\n"
@@ -68,11 +76,12 @@ def _require_admin(chat_id: str, command: str) -> bool:
     return False
 
 
-def _require_super_admin(chat_id: str, command: str) -> bool:
+def _require_super_admin(chat_id: str, command: str, user_id: str | None = None) -> bool:
     """슈퍼 관리자 권한이 있으면 True, 없으면 거부 메시지를 보내고 False를 반환합니다."""
-    if is_super_admin(chat_id):
+    auth_id = user_id or chat_id
+    if is_super_admin(auth_id):
         return True
-    logger.warning("슈퍼 관리자 전용 명령어 시도: %s (chat_id=%s)", command, chat_id)
+    logger.warning("슈퍼 관리자 전용 명령어 시도: %s (user_id=%s, chat_id=%s)", command, auth_id, chat_id)
     send_message(
         "⛔ <b>슈퍼 관리자 전용 명령어입니다.</b>\n"
         f"<code>{command}</code> 명령어는 슈퍼 관리자만 사용할 수 있습니다.",
@@ -102,9 +111,9 @@ def handle_list_command(chat_id: str) -> None:
     send_message(text, chat_id=chat_id)
 
 
-def handle_add_command(chat_id: str, args: list[str]) -> None:
+def handle_add_command(chat_id: str, args: list[str], user_id: str | None = None) -> None:
     """/add 명령어 처리 — 관리자 전용"""
-    if not _require_admin(chat_id, "/add"):
+    if not _require_admin(chat_id, "/add", user_id=user_id):
         return
 
     profile_name = get_active_profile_name()
@@ -125,9 +134,9 @@ def handle_add_command(chat_id: str, args: list[str]) -> None:
         send_message(f"⚠️ '<b>{keyword}</b>' 키워드는 이미 존재합니다.", chat_id=chat_id)
 
 
-def handle_remove_command(chat_id: str, args: list[str]) -> None:
+def handle_remove_command(chat_id: str, args: list[str], user_id: str | None = None) -> None:
     """/remove 명령어 처리 — 관리자 전용"""
-    if not _require_admin(chat_id, "/remove"):
+    if not _require_admin(chat_id, "/remove", user_id=user_id):
         return
 
     profile_name = get_active_profile_name()
@@ -148,9 +157,9 @@ def handle_remove_command(chat_id: str, args: list[str]) -> None:
         send_message(f"⚠️ '<b>{keyword}</b>' 키워드를 찾을 수 없습니다.", chat_id=chat_id)
 
 
-def handle_search_command(chat_id: str, args: list[str]) -> None:
+def handle_search_command(chat_id: str, args: list[str], user_id: str | None = None) -> None:
     """/search 명령어 처리: 즉각(일회성) 검색 — 관리자 전용"""
-    if not _require_admin(chat_id, "/search"):
+    if not _require_admin(chat_id, "/search", user_id=user_id):
         return
 
     profiles, _ = load_profiles()
@@ -201,7 +210,7 @@ def handle_search_command(chat_id: str, args: list[str]) -> None:
 
         all_messages = prebid_messages
         if all_messages:
-            send_notifications(all_messages)
+            send_notifications(all_messages, chat_id=chat_id)
             summary_text = f"✅ <b>검색 완료</b>: 사전규격 {len(all_messages)}건이 발견되었습니다."
             send_message(summary_text, chat_id=chat_id)
         else:
@@ -212,19 +221,56 @@ def handle_search_command(chat_id: str, args: list[str]) -> None:
         send_message(f"⚠️ 검색 중 지정된 조건에 맞는 결과를 가져오지 못했거나 오류가 발생했습니다. ({str(e)})", chat_id=chat_id)
 
 
-def handle_admin_command(chat_id: str, args: list[str]) -> None:
-    """/admin 명령어 처리 — 슈퍼 관리자 전용
-
+def handle_admin_command(chat_id: str, args: list[str], user_id: str | None = None) -> None:
+    """/admin 명령어 처리
+    
     사용법:
-        /admin list               — 현재 관리자 목록 출력
-        /admin add <chat_id>      — 관리자 추가
-        /admin remove <chat_id>   — 관리자 제거
-        /admin help               — 도움말
+        /admin users            — 전체 사용자(구독자) 목록 보기 (관리자 이상)
+        /admin list             — 현재 관리자 목록 출력 (슈퍼 관리자)
+        /admin add <chat_id>    — 관리자 추가 (슈퍼 관리자)
+        /admin remove <chat_id> — 관리자 제거 (슈퍼 관리자)
     """
-    if not _require_super_admin(chat_id, "/admin"):
-        return
+    sub = args[0].lower().strip() if args else "help"
+    logger.info("Admin 명령어 하위 구분: sub='%s', args=%s, chat_id=%s, user_id=%s", sub, args, chat_id, user_id)
 
-    sub = args[0].lower() if args else "help"
+    # 1. 'users' 명령어 (관리자 권한 이상 필요)
+    if sub == "users":
+        if not _require_admin(chat_id, "/admin users", user_id=user_id):
+            return
+        
+        try:
+            subs = sorted(list(load_subscribers()))
+            admins = sorted(list(get_all_admins()))
+            # 중복 제거 (세트로 합침)
+            all_ids = set(subs) | set(admins)
+            count = len(all_ids)
+            
+            lines = [f"👥 <b>전체 사용자 목록 (총 {count}명)</b>\n━━━━━━━━━━━━━━"]
+            lines.append("\n👑 <b>관리자 권한 사용자</b>")
+            for i, admin_id in enumerate(admins, 1):
+                label = " (슈퍼 관리자)" if is_super_admin(admin_id) else ""
+                lines.append(f"{i}. <code>{admin_id}</code>{label}")
+            
+            lines.append("\n👤 <b>일반 알림 구독자</b>")
+            # 관리자를 제외한 실제 구독자만 표시
+            only_subs = sorted(list(set(subs) - set(admins)))
+            if not only_subs:
+                lines.append("- (없음)")
+            else:
+                for i, sub_id in enumerate(only_subs, 1):
+                    lines.append(f"{i}. <code>{sub_id}</code>")
+                
+            send_message("\n".join(lines), chat_id=chat_id)
+            return
+        except Exception as e:
+            logger.error("사용자 목록 조회 중 오류: %s", e)
+            send_message(f"⚠️ 사용자 목록 조회 중 오류가 발생했습니다: {e}", chat_id=chat_id)
+            return
+
+    # 2. 그 외 명령어는 슈퍼 관리자만 가능
+    if not _require_super_admin(chat_id, "/admin", user_id=user_id):
+        # 슈퍼 관리자가 아니면 _require_super_admin 내부에서 메시지를 보내고 리턴됨
+        return
 
     if sub == "list":
         admins = get_all_admins()
@@ -264,17 +310,20 @@ def handle_admin_command(chat_id: str, args: list[str]) -> None:
             send_message(f"⚠️ <code>{target_id}</code> 는 관리자 목록에 없습니다.", chat_id=chat_id)
 
     else:
+        # 알 수 없는 sub-command이거나 help일 때
         send_message(
-            "👑 <b>/admin 명령어 도움말</b> (슈퍼 관리자 전용)\n"
+            "👑 <b>/admin 명령어 도움말</b>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
+            "/admin users — 전체 사용자(구독자) 목록 보기 (관리자+)\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "⚠️ <b>아래는 슈퍼 관리자 전용입니다.</b>\n"
             "/admin list — 관리자 목록 보기\n"
             "/admin add &lt;chat_id&gt; — 관리자 추가\n"
-            "/admin remove &lt;chat_id&gt; — 관리자 제거",
+            "/admin remove &lt;chat_id&gt; — 관리자 제거\n\n"
+            f"현재 사용자 ID: <code>{chat_id}</code>",
             chat_id=chat_id,
         )
 
-
-# ── 메인 업데이트 처리 ────────────────────────────────────────────────────────
 
 def _build_help_text(chat_id: str) -> str:
     """사용자 권한에 맞는 도움말 텍스트를 생성합니다."""
@@ -283,6 +332,7 @@ def _build_help_text(chat_id: str) -> str:
         "📋 <b>사용 가능한 명령어</b>\n"
         "━━━━━━━━━━━━━━━━━━\n"
         "🔍 /list — 현재 등록된 키워드 목록 보기\n"
+        "🚫 /stop — 알림 발송 중단 (구독 해지)\n"
     )
     if is_admin(chat_id):
         base += (
@@ -290,6 +340,7 @@ def _build_help_text(chat_id: str) -> str:
             "/add &lt;키워드&gt; — 검색 키워드 추가\n"
             "/remove &lt;키워드&gt; — 검색 키워드 제거\n"
             "/search &lt;키워드&gt; — 즉시 검색 실행\n"
+            "/admin users — 전체 사용자 목록 조회\n"
         )
     if is_super_admin(chat_id):
         base += (
@@ -346,6 +397,13 @@ def process_updates() -> None:
 
             text = message.get("text", "").strip()
             chat_id = str(message.get("chat", {}).get("id"))
+            from_user = message.get("from", {})
+            user_id = str(from_user.get("id")) if from_user else chat_id
+            
+            # [추가] 메시지를 보낸 모든 사용자를 자동으로 구독자 목록에 추가
+            # (그룹이 아닌 개인 사용자 ID 위주로 등록할 수도 있지만, 우선 채팅방 단위로 유지)
+            if chat_id:
+                add_subscriber(chat_id)
             
             if not text or not text.startswith("/"):
                 continue
@@ -356,20 +414,41 @@ def process_updates() -> None:
             command = raw_command.split("@")[0]
             args = parts[1:]
 
-            logger.info("명령어 수신: %s (args: %s, chat_id: %s)", command, args, chat_id)
+            logger.info("명령어 수신: %s (args: %s, chat_id: %s, user_id: %s)", command, args, chat_id, user_id)
+
+            # 권한 체크는 user_id 기준으로, 실제 메시지 전송은 chat_id 기준으로 하도록 핸들러 수정 고려
+            # 여기서는 편의상 핸들러 내부에서 user_id를 다시 확인하거나 chat_id에 user_id를 전달
+            
+            # 기존 핸들러들이 chat_id를 '권한 체크 대상'으로 사용하고 있으므로, 
+            # 관리자용 명령어인 경우 chat_id 대신 user_id를 전달하여 권한을 체크하게 함.
+            # 단, send_message는 chat_id로 가야 하므로 구조적 변경이 필요함.
+            
+            # 일단 가장 확실한 방법으로 handle_admin_command에 user_id를 추가로 전달하거나 
+            # is_admin이 chat_id와 user_id를 모두 체크하도록 수정.
+            
+            # [수정] 모든 핸들러에 chat_id(응답용)와 user_id(권한체크용)를 분리하여 고려.
+            # 여기서는 긴급 수정을 위해 handle_admin_command 내부에서 user_id를 직접 추출하도록 변경하거나 
+            # 아래 호출 시 user_id를 넘겨줌 (핸들러 파라미터 변경 필요)
 
             if command in ("/start", "/help"):
-                send_message(_build_help_text(chat_id), chat_id=chat_id)
+                send_message(_build_help_text(user_id), chat_id=chat_id)
             elif command == "/list":
                 handle_list_command(chat_id)
             elif command == "/add":
-                handle_add_command(chat_id, args)
+                # handle_add_command 내에서 _require_admin(chat_id)를 호출함.
+                # 이를 user_id를 쓰도록 수정해야 함.
+                handle_add_command(chat_id, args, user_id=user_id)
             elif command == "/remove":
-                handle_remove_command(chat_id, args)
+                handle_remove_command(chat_id, args, user_id=user_id)
             elif command == "/search":
-                handle_search_command(chat_id, args)
+                handle_search_command(chat_id, args, user_id=user_id)
             elif command == "/admin":
-                handle_admin_command(chat_id, args)
+                handle_admin_command(chat_id, args, user_id=user_id)
+            elif command == "/stop":
+                if remove_subscriber(chat_id):
+                    send_message("📴 알림 구독이 해제되었습니다. 다시 알림을 받으시려면 언제든 메시지를 보내주세요.", chat_id=chat_id)
+                else:
+                    send_message("⚠️ 구독 정보를 찾을 수 없거나 이미 해지되었습니다.", chat_id=chat_id)
             else:
                 send_message(f"알 수 없는 명령어입니다: {command}", chat_id=chat_id)
 

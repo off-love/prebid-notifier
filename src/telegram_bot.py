@@ -142,12 +142,16 @@ def _split_text(text: str, max_length: int) -> list[str]:
     return chunks
 
 
-def send_notifications(messages: list[dict[str, Any]] | list[str]) -> int:
+def send_notifications(
+    messages: list[dict[str, Any]] | list[str],
+    chat_id: str | None = None,
+) -> int:
     """여러 알림 메시지를 순차 전송
 
     Args:
         messages: 포맷팅된 메시지(또는 딕셔너리) 목록
                   딕셔너리일 경우 {"text": "...", "reply_markup": {...}} 형식
+        chat_id: 수신 채팅 ID (None이면 환경변수 기본값 사용)
 
     Returns:
         성공적으로 전송한 메시지 수
@@ -157,9 +161,9 @@ def send_notifications(messages: list[dict[str, Any]] | list[str]) -> int:
         if isinstance(msg, dict):
             text = msg.get("text", "")
             reply_markup = msg.get("reply_markup")
-            is_success = send_message(text, reply_markup=reply_markup)
+            is_success = send_message(text, reply_markup=reply_markup, chat_id=chat_id)
         else:
-            is_success = send_message(msg)
+            is_success = send_message(msg, chat_id=chat_id)
             
         if is_success:
             success_count += 1
@@ -167,3 +171,60 @@ def send_notifications(messages: list[dict[str, Any]] | list[str]) -> int:
         if i < len(messages) - 1:
             time.sleep(1)  # 텔레그램 rate limit 방지
     return success_count
+
+
+def broadcast_message(
+    text: str,
+    parse_mode: str = "HTML",
+    disable_web_page_preview: bool = True,
+    reply_markup: dict | None = None,
+) -> int:
+    """모든 관리자와 구독자에게 메시지 방송
+
+    Returns:
+        성공적으로 전송한 총 인원 수
+    """
+    from src.storage.admin_manager import get_all_admins
+    from src.storage.subscriber_manager import load_subscribers
+
+    admins = set(get_all_admins())
+    subs = load_subscribers()
+    all_recipients = sorted(list(admins | subs))
+
+    if not all_recipients:
+        # 아무도 없으면 환경변수 기본값으로라도 시도
+        return 1 if send_message(text, parse_mode, disable_web_page_preview, None, reply_markup) else 0
+
+    success_count = 0
+    for i, uid in enumerate(all_recipients):
+        if send_message(text, parse_mode, disable_web_page_preview, uid, reply_markup):
+            success_count += 1
+        
+        if i < len(all_recipients) - 1:
+            time.sleep(0.1)  # 방송 시 약간의 지연
+            
+    return success_count
+
+
+def broadcast_notifications(messages: list[dict[str, Any]] | list[str]) -> int:
+    """모든 관리자와 구독자에게 여러 알림 방송
+
+    Returns:
+        총 전송 성공 횟수 (메시지 수 * 수신자 수 아님, 메시지 단위 성공 여부 합산)
+    """
+    from src.storage.admin_manager import get_all_admins
+    from src.storage.subscriber_manager import load_subscribers
+
+    admins = set(get_all_admins())
+    subs = load_subscribers()
+    all_recipients = sorted(list(admins | subs))
+
+    if not all_recipients:
+        # 받는 사람이 없으면 send_notifications 기본 동작(환경변수) 수행
+        return send_notifications(messages)
+
+    total_success = 0
+    for uid in all_recipients:
+        total_success += send_notifications(messages, chat_id=uid)
+        
+    return total_success

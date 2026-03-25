@@ -88,9 +88,9 @@ def process_profile(profile: AlertProfile, state: dict, settings: dict) -> int:
             "알림 발송: 사전규격 %d건",
             len(prebid_messages),
         )
-        from src.telegram_bot import send_notifications
-        sent = send_notifications(all_messages)
-        logger.info("발송 완료: %d/%d건", sent, len(all_messages))
+        from src.telegram_bot import broadcast_notifications
+        sent = broadcast_notifications(all_messages)
+        logger.info("방송 완료: %d/%d건", sent, len(all_messages))
     else:
         logger.info("신규 알림 없음")
 
@@ -101,7 +101,8 @@ def process_profile(profile: AlertProfile, state: dict, settings: dict) -> int:
             prebid_count=len(prebid_messages),
             check_time=now_kst().strftime("%H:%M"),
         )
-        send_message(summary)
+        from src.telegram_bot import broadcast_message
+        broadcast_message(summary)
 
     return len(prebid_messages)
 
