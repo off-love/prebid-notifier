@@ -11,9 +11,12 @@ __pycache__/
 dist/
 build/
 
-# ── 데이터 및 설정 파일 (GitHub 제외) ──
+# ── 데이터 및 설정 파일 (GitHub 저장을 위해 예외 처리) ──
 data/*.json
+!data/subscribers_prebid.json
+!data/state.json
 config/admins.json
+!config/admins.json
 
 # ── 테스트/IDE ──
 .pytest_cache/
