@@ -1,5 +1,5 @@
 {
-  "last_check": "2026-03-28T11:49:29.691435+09:00",
+  "last_check": "2026-03-28T11:50:18.418194+09:00",
   "notified_bids": {},
   "notified_prebids": {
     "R26BD00201278": {
@@ -28,5 +28,5 @@
       "notice_type": "prebid"
     }
   },
-  "telegram_offset": 908190060
+  "telegram_offset": 908190062
 }
