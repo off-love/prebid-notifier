@@ -16,8 +16,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# admins.json 경로 (프로젝트 루트/config/admins.json)
-_ADMINS_PATH = Path(__file__).parent.parent.parent / "config" / "admins.json"
+# admins.json 경로 (프로젝트 루트/data/admins.json)
+_ADMINS_PATH = Path(__file__).parent.parent.parent / "data" / "admins.json"
 
 
 def _get_super_admin_id() -> str | None:

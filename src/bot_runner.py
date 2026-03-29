@@ -3,17 +3,16 @@
 
 GitHub Actions 대신 전용 서버(VPS 등)에서 24시간 구동할 때 사용합니다.
 - 텔레그램 명령어 수집: 10초마다 (실시간 응답 가능)
-- 입찰공고/사전규격 체크: 30분마다 (또는 설정된 주기)
+- 사전규격 체크: 30분마다 (또는 설정된 주기)
 """
 
 import logging
 import time
-import os
 import sys
 from datetime import datetime, timedelta
 
 from src.update_handler import process_updates
-from src.main import main as run_bid_check
+from src.main import main as run_prebid_check
 from src.storage.profile_manager import load_profiles
 
 # 로깅 설정
@@ -26,14 +25,14 @@ logger = logging.getLogger("BotRunner")
 
 def bot_loop():
     logger.info("=" * 50)
-    logger.info("나라장터 상시 구동 봇 시작")
+    logger.info("나라장터 사전규격 상시 구동 봇 시작")
     logger.info("=" * 50)
     
     _, settings = load_profiles()
     check_interval = settings.check_interval_minutes * 60  # 초 단위 변환
     update_interval = 10  # 텔레그램 명령어 확인 주기 (10초)
     
-    last_bid_check = datetime.now() - timedelta(seconds=check_interval)
+    last_prebid_check = datetime.now() - timedelta(seconds=check_interval)
     
     try:
         while True:
@@ -41,18 +40,18 @@ def bot_loop():
             
             # 1. 텔레그램 명령어 처리 (자주 확인)
             try:
-                process_updates()
+                process_updates(mode="prebid")
             except Exception as e:
                 logger.error(f"명령어 처리 중 오류: {e}")
             
-            # 2. 입찰공고 체크 (주기적 확인)
-            if (now - last_bid_check).total_seconds() >= check_interval:
-                logger.info("주기적 입찰공고 체크 시작...")
+            # 2. 사전규격 체크 (주기적 확인)
+            if (now - last_prebid_check).total_seconds() >= check_interval:
+                logger.info("주기적 사전규격 체크 시작...")
                 try:
-                    run_bid_check()
-                    last_bid_check = now
+                    run_prebid_check()
+                    last_prebid_check = now
                 except Exception as e:
-                    logger.error(f"입찰공고 체크 중 오류: {e}")
+                    logger.error(f"사전규격 체크 중 오류: {e}")
             
             # 짧은 대기 후 반복
             time.sleep(update_interval)
