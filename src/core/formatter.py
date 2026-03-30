@@ -23,7 +23,7 @@ def format_notice(notice: PreBidNotice, profile_name: str, matched_keyword: str 
         "🔔 <b>나라장터 신규 사전규격</b>",
         "━━━━━━━━━━━━━━━━━",
         "",
-        f"📋 <b>{prcure_name}</b>",
+        f"📋 {prcure_name}",
         f"📌 유형: {notice.bid_type.display_name}",
     ]
 
@@ -60,7 +60,7 @@ def _highlight_keyword(text: str, keyword: str) -> str:
     import re
     escaped_kw = _escape_html(keyword)
     pattern = re.compile(re.escape(escaped_kw), re.IGNORECASE)
-    return pattern.sub(lambda m: f"<code><b>{m.group(0)}</b></code>", text)
+    return pattern.sub(lambda m: f"<b>{m.group(0)}</b>", text)
 
 
 def format_share_message(notice: PreBidNotice) -> str:
