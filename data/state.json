@@ -1,5 +1,5 @@
 {
-  "last_check": "2026-04-10T15:00:52.062364+09:00",
+  "last_check": "2026-04-10T17:07:55.243558+09:00",
   "notified_bids": {},
   "notified_prebids": {
     "R26BD00201278": {
@@ -74,6 +74,11 @@
     },
     "R26BD00210574": {
       "notified_at": "2026-04-08T23:56:22.376492+09:00",
+      "profile": "지적측량 용역",
+      "notice_type": "prebid"
+    },
+    "R26BD00211991": {
+      "notified_at": "2026-04-10T17:07:43.833438+09:00",
       "profile": "지적측량 용역",
       "notice_type": "prebid"
     }
