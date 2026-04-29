@@ -31,7 +31,7 @@ def _get_api_key() -> str:
         key = os.environ.get("G2B_PREBID_API_KEY", "")
     if not key:
         raise ValueError(
-            "G2B_API_KEY 또는 G2B_PREBID_API_KEY 환경변수가 설정되지 않았습니다."
+            "G2B_API_KEY, G2B_BID_API_KEY 또는 G2B_PREBID_API_KEY 환경변수가 설정되지 않았습니다."
         )
     return key
 

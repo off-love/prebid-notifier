@@ -216,11 +216,11 @@ def main():
         sys.exit(1)
 
     # API 키 확인
-    has_prebid_key = bool(os.environ.get("G2B_PREBID_API_KEY"))
+    has_prebid_key = bool(os.environ.get("G2B_PREBID_API_KEY") or os.environ.get("G2B_API_KEY"))
     has_bid_key = bool(os.environ.get("G2B_API_KEY") or os.environ.get("G2B_BID_API_KEY"))
 
     if not has_prebid_key and not has_bid_key:
-        logger.error("G2B_PREBID_API_KEY 또는 G2B_API_KEY가 설정되지 않았습니다.")
+        logger.error("G2B_PREBID_API_KEY, G2B_API_KEY 또는 G2B_BID_API_KEY가 설정되지 않았습니다.")
         sys.exit(1)
 
     logger.info("API 키 상태: 사전규격=%s, 입찰공고=%s",
