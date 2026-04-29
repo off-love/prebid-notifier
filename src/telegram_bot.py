@@ -55,6 +55,15 @@ def _get_chat_id(mode: str = "prebid") -> str:
     return chat_id
 
 
+def _sanitize_error(error: object) -> str:
+    """로그에 텔레그램 토큰이 노출되지 않도록 오류 문자열을 정리합니다."""
+    message = str(error)
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    if token:
+        message = message.replace(token, "[REDACTED]")
+    return message
+
+
 def _split_text(text: str, max_length: int) -> list[str]:
     """텍스트를 줄 단위로 분할"""
     lines = text.split("\n")
@@ -108,11 +117,12 @@ def _send_with_retry(
             return data, data.get("description", "Unknown error")
 
         except requests.RequestException as e:
-            logger.error("텔레그램 API 호출 실패 (시도 %d/%d): %s", attempt + 1, max_retries, e)
+            safe_error = _sanitize_error(e)
+            logger.error("텔레그램 API 호출 실패 (시도 %d/%d): %s", attempt + 1, max_retries, safe_error)
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
                 continue
-            return None, str(e)
+            return None, safe_error
 
     return None, "Max retries exceeded"
 
