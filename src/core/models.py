@@ -189,3 +189,34 @@ class NotifiedRecord:
     notified_at: str              # 알림 발송 시각
     profile: str                  # 프로필명
     notice_type: str = "prebid"   # prebid
+
+
+@dataclass
+class BidNotice:
+        """Bid notice information"""
+        bid_ntce_no: str
+        bid_ntce_ord: str
+        bid_ntce_nm: str
+        ntce_instt_nm: str
+        dmin_instt_nm: str
+        bid_ntce_dt: str
+        bid_clse_dt: str
+        bdgt_amt: int
+        presmpt_prce: int
+        dtl_url: str
+        bid_type: BidType
+        ntce_kind_nm: str = ""
+        ntce_instt_cd: str = ""
+
+    @property
+    def unique_key(self) -> str:
+                return f"{self.bid_ntce_no}-{self.bid_ntce_ord}"
+
+    @property
+    def price_display(self) -> str:
+                if self.presmpt_prce <= 0:
+                                return "N/A"
+                            return f"{self.presmpt_prce:,} KRW"
+
+            return "N/A"
+        return f"{self.presmpt_prce:,} KRW"
