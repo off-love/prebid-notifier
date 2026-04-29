@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: bid-telegram-notice-check
+  cancel-in-progress: false
+
 jobs:
   check-notices:
     runs-on: ubuntu-latest
@@ -31,17 +35,26 @@ jobs:
         run: python -m src.update_handler
 
       - name: Run Notice Checker
+        id: notice_check
+        continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           G2B_PREBID_API_KEY: ${{ secrets.G2B_PREBID_API_KEY }}
-          G2B_API_KEY: ${{ secrets.G2B_API_KEY }}
+          G2B_BID_API_KEY: ${{ secrets.G2B_BID_API_KEY }}
+          G2B_API_KEY: ${{ secrets.G2B_API_KEY || secrets.G2B_BID_API_KEY }}
         run: python -m src.main
 
       - name: Commit state changes
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/ config/
           git diff --staged --quiet || git commit -m "chore: update state and profiles [skip ci]"
-          git push
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Fail when notice checker failed
+        if: steps.notice_check.outcome == 'failure'
+        run: exit 1

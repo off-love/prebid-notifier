@@ -39,7 +39,12 @@ def load_state(path: Path | None = None) -> dict:
         path = DEFAULT_STATE_PATH
     _ensure_file(path)
     with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        state = json.load(f)
+    state.setdefault("last_check", "")
+    state.setdefault("notified_bids", {})
+    state.setdefault("notified_prebids", {})
+    state.setdefault("telegram_offset_prebid", 0)
+    return state
 
 
 def save_state(state: dict, path: Path | None = None) -> None:

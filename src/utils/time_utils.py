@@ -54,6 +54,35 @@ def get_query_range(buffer_hours: int = 1) -> tuple[str, str]:
     return format_api_dt(begin), format_api_dt(now)
 
 
+def get_incremental_query_range(
+    last_check_iso: str = "",
+    buffer_hours: int = 1,
+    overlap_minutes: int = 15,
+) -> tuple[str, str]:
+    """마지막 성공 체크 시각 기준 조회 범위를 반환합니다."""
+    now = now_kst()
+    fallback_begin = now - timedelta(hours=buffer_hours)
+
+    if not last_check_iso:
+        return format_api_dt(fallback_begin), format_api_dt(now)
+
+    try:
+        last_check = datetime.fromisoformat(last_check_iso)
+    except (TypeError, ValueError):
+        return format_api_dt(fallback_begin), format_api_dt(now)
+
+    if last_check.tzinfo is None:
+        last_check = last_check.replace(tzinfo=KST)
+    else:
+        last_check = last_check.astimezone(KST)
+
+    begin = last_check - timedelta(minutes=max(overlap_minutes, 0))
+    if begin > now:
+        begin = fallback_begin
+
+    return format_api_dt(begin), format_api_dt(now)
+
+
 def calc_d_day(close_dt_str: str) -> str:
     """마감일까지 남은 일수 계산"""
     close_dt = parse_api_dt(close_dt_str)

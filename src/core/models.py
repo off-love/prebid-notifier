@@ -36,12 +36,12 @@ class BidType(str, Enum):
     def api_suffix(self) -> str:
         """입찰공고 API suffix"""
         mapping = {
-            self.SERVICE: "Servic",
-            self.GOODS: "ThngPrd",
+            self.SERVICE: "Servc",
+            self.GOODS: "Thng",
             self.CONSTRUCTION: "Cnstwk",
-            self.FOREIGN: "Frgn",
+            self.FOREIGN: "Frgcpt",
         }
-        return mapping.get(self, "Servic")
+        return mapping.get(self, "Servc")
 
 
 class NoticeType(str, Enum):

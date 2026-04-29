@@ -131,67 +131,67 @@ def fetch_prebid_notices(
     keyword: str = "",
     buffer_hours: int = 1,
     max_results: int = 999,
+    inqry_bgn_dt: str | None = None,
+    inqry_end_dt: str | None = None,
 ) -> list[PreBidNotice]:
     """사전규격 공개 목록 조회 (페이지네이션 지원)"""
-    bgn_dt, end_dt = get_query_range(buffer_hours)
+    if inqry_bgn_dt and inqry_end_dt:
+        bgn_dt, end_dt = inqry_bgn_dt, inqry_end_dt
+    else:
+        bgn_dt, end_dt = get_query_range(buffer_hours)
+
     all_notices: list[PreBidNotice] = []
     page_no = 1
 
     while True:
+        data = _fetch_prebid_page(
+            bid_type=bid_type,
+            page_no=page_no,
+            num_of_rows=min(max_results, 999),
+            inqry_bgn_dt=bgn_dt,
+            inqry_end_dt=end_dt,
+            keyword=keyword,
+        )
+
+        resp = data.get("response", {})
+        header = resp.get("header", {})
+        result_code = str(header.get("resultCode", ""))
+
+        if result_code == "00":
+            logger.debug("사전규격 API 응답 수집 완료: %s", bid_type.display_name)
+        else:
+            raise RuntimeError(
+                "사전규격 API 오류 "
+                f"[{result_code}]: {header.get('resultMsg', '알 수 없음')}"
+            )
+
+        body = resp.get("body", {})
         try:
-            data = _fetch_prebid_page(
-                bid_type=bid_type,
-                page_no=page_no,
-                num_of_rows=min(max_results, 999),
-                inqry_bgn_dt=bgn_dt,
-                inqry_end_dt=end_dt,
-                keyword=keyword,
-            )
+            total_count = int(body.get("totalCount", 0))
+        except (ValueError, TypeError):
+            total_count = 0
 
-            resp = data.get("response", {})
-            header = resp.get("header", {})
-            result_code = str(header.get("resultCode", ""))
-
-            if result_code == "00":
-                logger.debug("사전규격 API 응답 수집 완료: %s", bid_type.display_name)
-            else:
-                logger.warning(
-                    "사전규격 API 오류 [%s]: %s",
-                    result_code, header.get("resultMsg", "알 수 없음"),
-                )
-                break
-
-            body = resp.get("body", {})
-            try:
-                total_count = int(body.get("totalCount", 0))
-            except (ValueError, TypeError):
-                total_count = 0
-
-            items = body.get("items", [])
-            if not items:
-                break
-
-            if isinstance(items, dict):
-                items = [items]
-
-            for item in items:
-                notice = _parse_prebid_notice(item, bid_type)
-                all_notices.append(notice)
-
-            logger.info(
-                "  → 사전규격 %d건 조회 (페이지 %d, 전체 %d건)",
-                len(items), page_no, total_count,
-            )
-
-            if len(all_notices) >= total_count or len(all_notices) >= max_results:
-                break
-
-            page_no += 1
-            time.sleep(0.3)
-
-        except Exception as e:
-            logger.error("사전규격 API 호출 중 오류 발생: %s", e)
+        items = body.get("items", [])
+        if not items:
             break
+
+        if isinstance(items, dict):
+            items = [items]
+
+        for item in items:
+            notice = _parse_prebid_notice(item, bid_type)
+            all_notices.append(notice)
+
+        logger.info(
+            "  → 사전규격 %d건 조회 (페이지 %d, 전체 %d건)",
+            len(items), page_no, total_count,
+        )
+
+        if len(all_notices) >= total_count or len(all_notices) >= max_results:
+            break
+
+        page_no += 1
+        time.sleep(0.3)
 
     logger.info("사전규격 조회 완료: %s %s → %d건", bid_type.display_name, keyword or "(전체)", len(all_notices))
     return all_notices
