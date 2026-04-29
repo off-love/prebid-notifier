@@ -62,3 +62,11 @@ def test_fetch_bid_notices_uses_official_endpoint_and_query_range(monkeypatch):
     assert captured["params"]["bidNtceNm"] == "측량"
     assert notices[0].unique_key == "R26BK0001-000"
     assert notices[0].dmin_instt_nm == "서울특별시"
+
+
+def test_bid_api_key_uses_bid_secret_without_common_key(monkeypatch):
+    monkeypatch.delenv("G2B_API_KEY", raising=False)
+    monkeypatch.delenv("G2B_PREBID_API_KEY", raising=False)
+    monkeypatch.setenv("G2B_BID_API_KEY", "bid-key")
+
+    assert bid_client._get_api_key() == "bid-key"

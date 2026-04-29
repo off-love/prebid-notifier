@@ -31,6 +31,15 @@ def _get_bot_token() -> str:
     return token
 
 
+def _sanitize_error(error: object) -> str:
+    """로그에 텔레그램 토큰이 노출되지 않도록 오류 문자열을 정리합니다."""
+    message = str(error)
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    if token:
+        message = message.replace(token, "[REDACTED]")
+    return message
+
+
 def _send_reply(chat_id: str, text: str) -> bool:
     """텔레그램 메시지 응답"""
     token = _get_bot_token()
@@ -46,7 +55,7 @@ def _send_reply(chat_id: str, text: str) -> bool:
         data = resp.json()
         return data.get("ok", False)
     except Exception as e:
-        logger.error("응답 전송 실패 [%s]: %s", chat_id, e)
+        logger.error("응답 전송 실패 [%s]: %s", chat_id, _sanitize_error(e))
         return False
 
 
@@ -64,7 +73,7 @@ def _get_updates(offset: int | None = None, timeout: int = 5) -> list[dict]:
         if data.get("ok"):
             return data.get("result", [])
     except Exception as e:
-        logger.error("업데이트 가져오기 실패: %s", e)
+        logger.error("업데이트 가져오기 실패: %s", _sanitize_error(e))
 
     return []
 

@@ -42,7 +42,6 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           G2B_PREBID_API_KEY: ${{ secrets.G2B_PREBID_API_KEY }}
           G2B_BID_API_KEY: ${{ secrets.G2B_BID_API_KEY }}
-          G2B_API_KEY: ${{ secrets.G2B_API_KEY || secrets.G2B_BID_API_KEY }}
         run: python -m src.main
 
       - name: Commit state changes

@@ -2,7 +2,7 @@
 입찰공고정보서비스 API 클라이언트
 
 나라장터 입찰공고 정보를 업종별로 조회합니다.
-G2B_API_KEY 환경변수가 필요합니다.
+G2B_BID_API_KEY 또는 G2B_API_KEY 환경변수가 필요합니다.
 """
 
 from __future__ import annotations
