@@ -192,12 +192,15 @@ def process_profile(profile, settings, state, query_begin: str, query_end: str) 
         if partial_failure:
             result.had_failures = True
 
-    # ── 결과 요약 발송 ──
-    check_time = now_kst().strftime("%m/%d %H:%M")
-    summary = format_summary(profile.name, result.prebid_count, result.bid_count, check_time)
-    summary_ok, summary_failure = _send_to_subscribers(summary, subscribers)
-    if not summary_ok or summary_failure:
-        result.had_failures = True
+    # ── 결과 요약 발송 (신규 공고가 있을 때만) ──
+    if result.prebid_count > 0 or result.bid_count > 0:
+        check_time = now_kst().strftime("%m/%d %H:%M")
+        summary = format_summary(profile.name, result.prebid_count, result.bid_count, check_time)
+        summary_ok, summary_failure = _send_to_subscribers(summary, subscribers)
+        if not summary_ok or summary_failure:
+            result.had_failures = True
+    else:
+        logger.info("신규 공고 없음 — 알림을 건너뜁니다.")
 
     return result
 
