@@ -14,6 +14,7 @@ def format_prebid_notice(notice: PreBidNotice, profile_name: str, matched_keywor
     """사전규격 공고 텔레그램 메시지 포맷"""
     d_day = calc_d_day(notice.opnn_reg_clse_dt)
     d_day_text = f" ({d_day})" if d_day else ""
+    keyword_label = _escape_html(matched_keyword or "전체")
 
     title = _escape_html(notice.prcure_nm)
     if matched_keyword:
@@ -23,7 +24,7 @@ def format_prebid_notice(notice: PreBidNotice, profile_name: str, matched_keywor
         )
 
     lines = [
-        f"📋 <b>[{_escape_html(profile_name)}] 사전규격</b>",
+        f"📋 <b>[사전규격] {keyword_label}</b>",
         f"📌 <b>{title}</b>",
         f"🏢 {_escape_html(notice.ntce_instt_nm)}",
     ]
@@ -43,6 +44,7 @@ def format_prebid_notice(notice: PreBidNotice, profile_name: str, matched_keywor
 
 def format_bid_notice(notice: BidNotice, profile_name: str, matched_keyword: str = "") -> str:
     """입찰공고 텔레그램 메시지 포맷"""
+    keyword_label = _escape_html(matched_keyword or "전체")
     title = _escape_html(notice.bid_ntce_nm)
     if matched_keyword:
         title = title.replace(
@@ -54,7 +56,7 @@ def format_bid_notice(notice: BidNotice, profile_name: str, matched_keyword: str
     d_day_text = f" ({d_day})" if d_day else ""
 
     lines = [
-        f"📢 <b>[{_escape_html(profile_name)}] 입찰공고</b>",
+        f"📢 <b>[입찰공고] {keyword_label}</b>",
         f"📌 <b>{title}</b>",
         f"🏢 {_escape_html(notice.ntce_instt_nm)}",
         f"📍 {_escape_html(notice.dmin_instt_nm)}",
