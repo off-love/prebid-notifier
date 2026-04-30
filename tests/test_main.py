@@ -92,6 +92,37 @@ def test_process_profile_sends_prebid_and_bid(monkeypatch):
     assert is_notified(state, "R26BK0001-000", "bid") is True
 
 
+def test_process_profile_skips_prebid_when_disabled(monkeypatch):
+    state = {"notified_bids": {}, "notified_prebids": {}}
+    captured = {"bid": []}
+
+    def fail_fetch_prebid(**kwargs):
+        raise AssertionError("사전규격 API는 호출되면 안 됩니다.")
+
+    def fake_fetch_bid(**kwargs):
+        captured["bid"].append(kwargs)
+        return [_bid_notice()]
+
+    monkeypatch.setattr(main_module, "fetch_prebid_notices", fail_fetch_prebid)
+    monkeypatch.setattr(main_module, "fetch_bid_notices", fake_fetch_bid)
+    monkeypatch.setattr(main_module, "load_subscribers", lambda mode="prebid": {"1001"})
+    monkeypatch.setattr(main_module, "send_message", lambda *args, **kwargs: True)
+
+    result = main_module.process_profile(
+        _profile(),
+        _settings(),
+        state,
+        "202604301000",
+        "202604301100",
+        run_prebid=False,
+    )
+
+    assert result.prebid_count == 0
+    assert result.bid_count == 1
+    assert captured["bid"][0]["inqry_bgn_dt"] == "202604301000"
+    assert is_notified(state, "R26BK0001-000", "bid") is True
+
+
 def test_process_profile_does_not_mark_failed_delivery(monkeypatch):
     state = {"notified_bids": {}, "notified_prebids": {}}
 
@@ -111,6 +142,17 @@ def test_process_profile_does_not_mark_failed_delivery(monkeypatch):
     assert result.bid_count == 0
     assert result.had_failures is True
     assert is_notified(state, "R26BK0001-000", "bid") is False
+
+
+def test_should_run_prebid_respects_env(monkeypatch):
+    monkeypatch.delenv("RUN_PREBID", raising=False)
+    assert main_module.should_run_prebid() is True
+
+    monkeypatch.setenv("RUN_PREBID", "0")
+    assert main_module.should_run_prebid() is False
+
+    monkeypatch.setenv("RUN_PREBID", "1")
+    assert main_module.should_run_prebid() is True
 
 
 def test_main_keeps_last_check_when_profile_failed(monkeypatch):

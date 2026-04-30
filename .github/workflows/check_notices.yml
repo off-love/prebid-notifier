@@ -2,7 +2,18 @@ name: 나라장터 공고 체크
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    # KST 월~금 08:11~21:41: 입찰공고 30분 간격, 사전규격 60분 간격
+    # 입찰톡(:07/:37)과 정각/15/30/45 피크를 피하기 위해 :11/:41을 사용합니다.
+    - cron: '11 23 * * 0-4'
+    - cron: '41 23 * * 0-4'
+    - cron: '11 0-12 * * 1-5'
+    - cron: '41 0-12 * * 1-5'
+    # KST 월~금 야간(22:11~06:11): 2시간 간격
+    - cron: '11 13 * * 1-5'
+    - cron: '11 15-21/2 * * 0-4'
+    # KST 토~일: 2시간 간격
+    - cron: '11 15-23/2 * * 5,6'
+    - cron: '11 1-13/2 * * 0,6'
   workflow_dispatch:
 
 permissions:
@@ -26,6 +37,17 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Configure schedule mode
+        run: |
+          schedule='${{ github.event.schedule }}'
+          if [[ "$schedule" == 41\ * ]]; then
+            echo "RUN_PREBID=0" >> "$GITHUB_ENV"
+            echo "사전규격 건너뜀: 입찰공고 전용 30분 보강 실행"
+          else
+            echo "RUN_PREBID=1" >> "$GITHUB_ENV"
+            echo "사전규격 포함 실행"
+          fi
 
       - name: Run Telegram Update Handler
         env:

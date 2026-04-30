@@ -86,7 +86,20 @@ def _send_to_subscribers(message: str, subscribers: set[str]) -> tuple[bool, boo
     return result.success_count > 0, result.fail_count > 0
 
 
-def process_profile(profile, settings, state, query_begin: str, query_end: str) -> ProfileProcessResult:
+def should_run_prebid() -> bool:
+    """스케줄별 사전규격 실행 여부를 반환합니다."""
+    value = os.environ.get("RUN_PREBID", "1").strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def process_profile(
+    profile,
+    settings,
+    state,
+    query_begin: str,
+    query_end: str,
+    run_prebid: bool = True,
+) -> ProfileProcessResult:
     """단일 프로필에 대해 사전규격 + 입찰공고를 조회하고 알림을 발송합니다."""
     result = ProfileProcessResult()
 
@@ -106,19 +119,20 @@ def process_profile(profile, settings, state, query_begin: str, query_end: str) 
     for bid_type in profile.bid_types:
         for keyword in keywords_to_search:
             # ── 사전규격 조회 ──
-            try:
-                prebid_notices = fetch_prebid_notices(
-                    bid_type=bid_type,
-                    keyword=keyword,
-                    buffer_hours=settings.query_buffer_hours,
-                    max_results=settings.max_results_per_page,
-                    inqry_bgn_dt=query_begin,
-                    inqry_end_dt=query_end,
-                )
-                all_prebid_notices.extend(prebid_notices)
-            except Exception as e:
-                logger.error("사전규격 조회 실패 (%s/%s): %s", bid_type.display_name, keyword, e)
-                result.had_failures = True
+            if run_prebid:
+                try:
+                    prebid_notices = fetch_prebid_notices(
+                        bid_type=bid_type,
+                        keyword=keyword,
+                        buffer_hours=settings.query_buffer_hours,
+                        max_results=settings.max_results_per_page,
+                        inqry_bgn_dt=query_begin,
+                        inqry_end_dt=query_end,
+                    )
+                    all_prebid_notices.extend(prebid_notices)
+                except Exception as e:
+                    logger.error("사전규격 조회 실패 (%s/%s): %s", bid_type.display_name, keyword, e)
+                    result.had_failures = True
 
             # ── 입찰공고 조회 ──
             try:
@@ -242,6 +256,9 @@ def main():
         return
 
     logger.info("활성 프로필 %d개 로드", len(profiles))
+    run_prebid = should_run_prebid()
+    if not run_prebid:
+        logger.info("사전규격은 이번 실행에서 건너뜁니다. RUN_PREBID=0")
 
     # 상태 로드
     state = load_state()
@@ -263,7 +280,14 @@ def main():
 
     for profile in profiles:
         try:
-            profile_result = process_profile(profile, settings, state, query_begin, query_end)
+            profile_result = process_profile(
+                profile,
+                settings,
+                state,
+                query_begin,
+                query_end,
+                run_prebid=run_prebid,
+            )
             total_prebid += profile_result.prebid_count
             total_bid += profile_result.bid_count
             had_failures = had_failures or profile_result.had_failures

@@ -86,7 +86,7 @@ def _handle_command(chat_id: str, text: str, mode: str = "prebid") -> None:
         add_subscriber(str(chat_id), mode=mode)
         _send_reply(chat_id,
             "안녕하세요! 🏗️ <b>나라장터 입찰 알림 봇</b>입니다.\n\n"
-            "• 30분마다 자동으로 새 공고를 확인합니다.\n"
+            "• 주간에는 30분마다, 야간/주말에는 2시간마다 새 공고를 확인합니다.\n"
             "• 사전규격, 입찰공고 알림을 받을 수 있습니다.\n\n"
             "<b>명령어:</b>\n"
             "/subscribe - 알림 구독\n"
