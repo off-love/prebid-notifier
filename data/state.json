@@ -1,5 +1,5 @@
 {
-  "last_check": "2026-05-04T13:04:50.872696+09:00",
+  "last_check": "2026-05-04T13:30:33.235156+09:00",
   "notified_bids": {
     "R26BK01497351-000": {
       "notified_at": "2026-04-30T10:16:12.254887+09:00",
@@ -28,6 +28,11 @@
     },
     "R26BK01490361-001": {
       "notified_at": "2026-05-04T13:04:48.783378+09:00",
+      "profile": "지적측량 용역",
+      "notice_type": "bid"
+    },
+    "R26BK01502066-000": {
+      "notified_at": "2026-05-04T13:30:31.116230+09:00",
       "profile": "지적측량 용역",
       "notice_type": "bid"
     }
@@ -130,5 +135,5 @@
     }
   },
   "telegram_offset": 908190087,
-  "telegram_offset_prebid": 908190108
+  "telegram_offset_prebid": 908190109
 }
